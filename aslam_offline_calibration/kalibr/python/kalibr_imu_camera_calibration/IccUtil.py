@@ -282,6 +282,10 @@ def exportPoses(cself, filename="poses_imu0.csv"):
 def saveResultTxt(cself, filename='cam_imu_result.txt'):
     f = open(filename, 'w')
     printResultTxt(cself, stream=f)
+    f.close()
+    f_v = open(filename.replace('.txt', '_forVIST.txt'), 'w')
+    printResultTxtForVIST(cself, stream=f_v)
+    f_v.close()
 
 def printResultTxt(cself, stream=sys.stdout):
     
@@ -347,3 +351,67 @@ def printResultTxt(cself, stream=sys.stdout):
         print("IMU{0}:\n".format(imuNr), "----------------------------", file=stream)
         imu.getImuConfig().printDetails(stream)
         print("", file=stream)
+
+def printResultTxtForVIST(cself, stream=sys.stdout):
+
+    def formatIndented4(np_array):
+        assert len(np.shape(np_array)) == 4, "Input array is not 4D!"
+        return str(np.array2string(np_array, separator=', ')).replace('\n\n\n ', '\n').replace('\
+    \n\n ','\n').replace('\n  ', '')
+    
+    print("Calibration results", file=stream)
+    print("===================", file=stream)
+  
+    # Calibration results
+    nCams = len(cself.CameraChain.camList)
+    for camNr in range(0,nCams):
+        print("timeshift cam{0} to imu0: [s] (t_imu = t_cam + shift)".format(camNr), file=stream)
+        print(cself.CameraChain.getResultTimeShift(camNr), file=stream)
+        print("", file=stream)
+
+    print("", file=stream)
+    print("Calibration configuration", file=stream)
+    print("=========================", file=stream)
+    print("", file=stream)
+
+    for camNr, cam in enumerate( cself.CameraChain.camList ):
+        print("cam{0}".format(camNr), file=stream)
+        print("-----", file=stream)
+        cam.camConfig.printDetails(stream)
+        print("", file=stream)
+    
+    print("", file=stream)
+    print("", file=stream)
+    print("IMU configuration", file=stream)
+    print("=================", file=stream)
+    print("", file=stream)
+    sc_misal = np.zeros((len(cself.ImuList), 4, 3, 3))
+    acc_nd = np.zeros(len(cself.ImuList))
+    acc_b_rn = np.zeros(len(cself.ImuList))
+    gyr_nd = np.zeros(len(cself.ImuList))
+    gyr_b_rn = np.zeros(len(cself.ImuList))
+    for (imuNr, imu) in enumerate(cself.ImuList):
+        # print("IMU{0}:\n".format(imuNr), "----------------------------", file=stream)
+        # imu.getImuConfig().printDetails(stream)
+        # print("", file=stream)
+
+        imuConfig = imu.getImuConfig()
+        # Scale and misalignment
+        a_M = np.array(imuConfig.data["accelerometers"]["M"])
+        g_M = np.array(imuConfig.data["gyroscopes"]["M"])
+        g_A = np.array(imuConfig.data["gyroscopes"]["A"])
+        C_g_i = np.array(imuConfig.data["gyroscopes"]["C_gyro_i"])
+        sc_misal[imuNr,0,:,:] = np.linalg.inv(a_M)
+        sc_misal[imuNr,1,:,:] = np.linalg.inv(g_M)
+        sc_misal[imuNr,2,:,:] = g_A
+        sc_misal[imuNr,3,:,:] = np.transpose(C_g_i)
+        # Noise
+        update_rate = imuConfig.getUpdateRate()
+        _, acc_b_rn[imuNr], acc_nd[imuNr] = imuConfig.getAccelerometerStatistics()
+        _, gyr_b_rn[imuNr], gyr_nd[imuNr] = imuConfig.getGyroStatistics()
+    print("acc_noise_density =", str(np.array2string(acc_nd, separator=', ')), file=stream)
+    print("acc_bias_random_walk =", str(np.array2string(acc_b_rn, separator=', ')), file=stream)
+    print("gyr_noise_density =", str(np.array2string(gyr_nd, separator=', ')), file=stream)
+    print("gyr_bias_random_walk =", str(np.array2string(gyr_b_rn, separator=', ')), file=stream)
+    print("update_rate =", update_rate, file=stream)
+    print("sc_misal =", formatIndented4(sc_misal), file=stream)
