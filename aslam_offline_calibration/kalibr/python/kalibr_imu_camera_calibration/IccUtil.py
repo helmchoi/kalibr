@@ -358,6 +358,11 @@ def printResultTxtForVIST(cself, stream=sys.stdout):
         assert len(np.shape(np_array)) == 4, "Input array is not 4D!"
         return str(np.array2string(np_array, separator=', ')).replace('\n\n\n ', '\n').replace('\
     \n\n ','\n').replace('\n  ', '')
+
+    def formatIndented3(np_array):
+        assert len(np.shape(np_array)) == 3, "Input array is not 3D!"
+        return str(np.array2string(np_array, separator=', ')).replace('\
+    \n\n','\n').replace('\n ', '')
     
     print("Calibration results", file=stream)
     print("===================", file=stream)
@@ -386,15 +391,12 @@ def printResultTxtForVIST(cself, stream=sys.stdout):
     print("=================", file=stream)
     print("", file=stream)
     sc_misal = np.zeros((len(cself.ImuList), 4, 3, 3))
+    biases = np.zeros((len(cself.ImuList), 2, 3))
     acc_nd = np.zeros(len(cself.ImuList))
     acc_b_rn = np.zeros(len(cself.ImuList))
     gyr_nd = np.zeros(len(cself.ImuList))
     gyr_b_rn = np.zeros(len(cself.ImuList))
     for (imuNr, imu) in enumerate(cself.ImuList):
-        # print("IMU{0}:\n".format(imuNr), "----------------------------", file=stream)
-        # imu.getImuConfig().printDetails(stream)
-        # print("", file=stream)
-
         imuConfig = imu.getImuConfig()
         # Scale and misalignment
         a_M = np.array(imuConfig.data["accelerometers"]["M"])
@@ -409,9 +411,19 @@ def printResultTxtForVIST(cself, stream=sys.stdout):
         update_rate = imuConfig.getUpdateRate()
         _, acc_b_rn[imuNr], acc_nd[imuNr] = imuConfig.getAccelerometerStatistics()
         _, gyr_b_rn[imuNr], gyr_nd[imuNr] = imuConfig.getGyroStatistics()
+        # Bias
+        bias_a = imu.accelBiasDv.spline()
+        bias_g = imu.gyroBiasDv.spline()
+        times = np.array([im.stamp.toSec() for im in imu.imuData if im.stamp.toSec() > bias_a.t_min() \
+                            and im.stamp.toSec() < bias_a.t_max() ])
+        acc_bias_spline = np.array([bias_a.evalD(t,0) for t in times]).T
+        gyro_bias_spline = np.array([bias_g.evalD(t,0) for t in times]).T
+        biases[imuNr,0,:] = np.mean(acc_bias_spline, axis=1)
+        biases[imuNr,1,:] = np.mean(gyro_bias_spline, axis=1)
     print("acc_noise_density =", str(np.array2string(acc_nd, separator=', ')), file=stream)
     print("acc_bias_random_walk =", str(np.array2string(acc_b_rn, separator=', ')), file=stream)
     print("gyr_noise_density =", str(np.array2string(gyr_nd, separator=', ')), file=stream)
     print("gyr_bias_random_walk =", str(np.array2string(gyr_b_rn, separator=', ')), file=stream)
     print("update_rate =", update_rate, file=stream)
     print("sc_misal =", formatIndented4(sc_misal), file=stream)
+    print("biases =", formatIndented3(biases), file=stream)

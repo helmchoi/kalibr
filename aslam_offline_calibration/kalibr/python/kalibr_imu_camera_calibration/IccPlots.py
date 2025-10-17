@@ -144,7 +144,6 @@ def plotAccelBias(cself, imu_idx, fno=1, clearFigure=True, noShow=False):
     times = np.array([im.stamp.toSec() for im in imu.imuData if im.stamp.toSec() > bias.t_min() \
                       and im.stamp.toSec() < bias.t_max() ])
     acc_bias_spline = np.array([bias.evalD(t,0) for t in times]).T
-    print("add bias #{}: ".format(imu_idx), acc_bias_spline)
     times = times - times[0]     #remove time offset
 
     plotVectorOverTime(times, acc_bias_spline, 
