@@ -356,12 +356,12 @@ def printResultTxtForVIST(cself, stream=sys.stdout):
 
     def formatIndented4(np_array):
         assert len(np.shape(np_array)) == 4, "Input array is not 4D!"
-        return str(np.array2string(np_array, separator=', ')).replace('\n\n\n ', '\n').replace('\
+        return str(np.array2string(np_array, separator=', ', formatter={'float_kind': '{:2.9}'.format})).replace('\n\n\n ', '\n').replace('\
     \n\n ','\n').replace('\n  ', '')
 
     def formatIndented3(np_array):
         assert len(np.shape(np_array)) == 3, "Input array is not 3D!"
-        return str(np.array2string(np_array, separator=', ')).replace('\
+        return str(np.array2string(np_array, separator=', ', formatter={'float_kind': '{:2.9}'.format})).replace('\
     \n\n','\n').replace('\n ', '')
     
     print("Calibration results", file=stream)
@@ -420,10 +420,10 @@ def printResultTxtForVIST(cself, stream=sys.stdout):
         gyro_bias_spline = np.array([bias_g.evalD(t,0) for t in times]).T
         biases[imuNr,0,:] = np.mean(acc_bias_spline, axis=1)
         biases[imuNr,1,:] = np.mean(gyro_bias_spline, axis=1)
-    print("acc_noise_density =", str(np.array2string(acc_nd, separator=', ')), file=stream)
-    print("acc_bias_random_walk =", str(np.array2string(acc_b_rn, separator=', ')), file=stream)
-    print("gyr_noise_density =", str(np.array2string(gyr_nd, separator=', ')), file=stream)
-    print("gyr_bias_random_walk =", str(np.array2string(gyr_b_rn, separator=', ')), file=stream)
+    print("acc_noise_density =", str(np.array2string(acc_nd, separator=', ', formatter={'float_kind': '{:2.9}'.format})), file=stream)
+    print("acc_bias_random_walk =", str(np.array2string(acc_b_rn, separator=', ', formatter={'float_kind': '{:2.9}'.format})), file=stream)
+    print("gyr_noise_density =", str(np.array2string(gyr_nd, separator=', ', formatter={'float_kind': '{:2.9}'.format})), file=stream)
+    print("gyr_bias_random_walk =", str(np.array2string(gyr_b_rn, separator=', ', formatter={'float_kind': '{:2.9}'.format})), file=stream)
     print("update_rate =", update_rate, file=stream)
     print("sc_misal =", formatIndented4(sc_misal), file=stream)
     print("biases =", formatIndented3(biases), file=stream)
